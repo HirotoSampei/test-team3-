@@ -1,4 +1,4 @@
-package jp.te4a.spring.boot.myapp8;
+package jp.te4a.spring.boot.myapp9;
 
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.SpringBootTest;
