@@ -1,4 +1,4 @@
-package jp.te4a.spring.boot.myapp11;
+package jp.te4a.spring.boot.myapp12;
 import javax.validation.constraints.Min;
 import javax.validation.constraints.NotNull;
 import javax.validation.constraints.Size;
@@ -12,6 +12,7 @@ public class BookForm {
   @Size(min = 3)
   private String title;
   @Size(min = 3, max = 20)
+  @Writer(ok="東北タロウ")
   private String writer;
   private String publisher;
   @Min(0)
