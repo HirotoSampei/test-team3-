@@ -1,0 +1,101 @@
+name: Maven build and Deploy to ec2
+
+on:
+  push:
+    branches: [ master ]
+
+env:
+  EC2_USER: 'ec2-user'
+  EC2_HOST: 3.94.196.119
+  SRC_PATH: 'build/libs/*.jar'
+  DEST_DIR: '/var/apps'
+
+  APP_NAME: 'team3_app'    # your app name
+  JAVA_VERSION: '1.8'    # '1.8' or '11'
+  JAVA_OPTS: '-Xms1024M -Xmx1024M'
+  RUN_ARGS: '--spring.profiles.active=prod'
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v3
+    - name: Set up JDK 11
+      uses: actions/setup-java@v3
+      with:
+        java-version: '11'
+        distribution: 'adopt'
+    - name: Build with Maven
+      run: mvn --batch-mode --update-snapshots package
+
+    - name: SCP EC2 Copy app file
+      env:
+        PRIVATE_KEY: ${{ secrets.AWS_EC2_PRIVATE_KEY }}
+      run: |
+        echo "$PRIVATE_KEY" > private_key && chmod 600 private_key
+        ssh -t -o StrictHostKeyChecking=no -i private_key ${EC2_USER}@${EC2_HOST} "sudo mkdir -p $DEST_DIR/$APP_NAME && sudo chmod -R 777 $DEST_DIR/$APP_NAME"
+        scp -i private_key ${SRC_PATH} ${EC2_USER}@${EC2_HOST}:${DEST_DIR}/${APP_NAME}/${APP_NAME}.jar
+
+    - name: SSH EC2 Setup and Deploy
+      uses: appleboy/ssh-action@v0.0.9
+      with:
+        key: ${{ secrets.AWS_EC2_PRIVATE_KEY }}
+        username: ${{ env.EC2_USER }}
+        host: ${{ env.EC2_HOST }}
+        envs: DEST_DIR,JAVA_VERSION,APP_NAME,JAVA_OPTS,RUN_ARGS
+        script: |
+          echo "===== yum update ====="
+          sudo yum update -y
+          echo "===== check java install ====="
+          if java -version 2>&1 >/dev/null | grep "java version\|openjdk version" ; then
+            echo "already installed java."
+          else
+            echo "install java."
+            TARGET=$(yum search java | grep "$JAVA_VERSION.*devel\.\|$JAVA_VERSION.*amazon-corretto\." | awk '{print $1}')
+            echo "install target name -> $TARGET"
+            sudo yum install -y ${TARGET}
+            echo "JAVA_HOME=$(readlink -f /usr/bin/java | sed "s:bin/java::")" | sudo tee -a   /etc/profile
+            source /etc/profile
+          fi
+          echo "===== check conf file ====="
+          if [ -f ${DEST_DIR}/${APP_NAME}/${APP_NAME}.conf ]; then
+          echo "already exist conf file for $APP_NAME"
+          else
+          echo "create conf file for $APP_NAME"
+          cat <<EOL | sudo tee -a ${DEST_DIR}/${APP_NAME}/${APP_NAME}.conf
+          export LANG="ja_JP.UTF8"
+          JAVA_OPTS="$JAVA_OPTS"
+          RUN_ARGS="$RUN_ARGS"
+          EOL
+          fi
+          echo "===== check exist service file ====="
+          if [ -f /etc/systemd/system/${APP_NAME}.service ]; then
+          echo "already exist service file for $APP_NAME"
+          else
+          echo "create service file for $APP_NAME"
+          cat <<EOL | sudo tee -a  /etc/systemd/system/${APP_NAME}.service
+          [Unit]
+          Description = ${APP_NAME} app
+
+          [Service]
+          ExecStart =  ${DEST_DIR}/${APP_NAME}/${APP_NAME}.jar
+          Restart = always
+          Type = simple
+          User = root
+          Group = root
+          SuccessExitStatus = 143
+
+          [Install]
+          WantedBy = multi-user.target
+          EOL
+          fi
+          echo "===== application (re)start ====="
+          sudo systemctl daemon-reload
+          if sudo systemctl status ${APP_NAME} 2>&1 | grep "Active: active (running)" ; then
+            echo "${APP_NAME} app restart!!"
+            sudo systemctl restart ${APP_NAME}
+          else
+            echo "${APP_NAME} app start!!"
+            sudo systemctl start ${APP_NAME}
+          fi
