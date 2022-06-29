@@ -9,7 +9,7 @@
 		<version>2.6.7</version>
 		<relativePath/> <!-- lookup parent from repository -->
 	</parent>
-	
+	<!--  -->
 	<groupId>jp.te4a.spring.boot</groupId>
 	<artifactId>MyBootApp4</artifactId>
 	<version>0.0.1-SNAPSHOT</version>
