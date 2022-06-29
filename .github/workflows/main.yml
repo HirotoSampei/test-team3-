@@ -7,7 +7,7 @@ on:
 env:
   EC2_USER: 'ec2-user'
   EC2_HOST: 3.94.196.119
-  SRC_PATH: 'build/libs/*.jar'
+  SRC_PATH: 'target/*.jar'
   DEST_DIR: '/var/apps'
 
   APP_NAME: 'team3_app'    # your app name
