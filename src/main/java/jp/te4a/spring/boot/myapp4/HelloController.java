@@ -8,6 +8,7 @@ import org.springframework.web.bind.annotation.RestController;
 public class HelloController {
 
     @GetMapping("/test")
+
     public String index() {
         return "this is Spring Boot sample.";
     }
