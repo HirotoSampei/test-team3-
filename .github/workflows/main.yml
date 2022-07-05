@@ -6,7 +6,7 @@ on:
 
 env:
   EC2_USER: 'ec2-user'
-  EC2_HOST: 54.210.108.169
+  EC2_HOST: 52.20.78.232
   SRC_PATH: 'target/*.jar'
   DEST_DIR: '/var/apps'
 
