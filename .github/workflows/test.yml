@@ -4,6 +4,7 @@ on:
   push:
     branches: [ kadai13 ]
 
+
 env:
   EC2_USER: 'ec2-user'
   EC2_HOST: 44.208.128.247
